@@ -305,6 +305,7 @@ app = Flask(__name__)
 CORS(app)  # Allows all origins
 ```
 
+
 ## Troubleshooting
 
 ### Backend Issues:
