@@ -1,9 +1,0 @@
-{
-  "apk_name": "Fake_SBI_Banking.apk",
-  "quarantine_reason": "HIGH_RISK",
-  "risk_score": 100,
-  "threats": [
-    "High risk score"
-  ],
-  "quarantine_timestamp": "2025-09-01T19:55:04.040465"
-}

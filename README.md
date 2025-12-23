@@ -63,6 +63,55 @@ Binary File  Permissions,         [0.2, 0.8, 0.1, ...]
 - **Metadata**: File size, version, SDK levels (15 features)
 - **Security**: Obfuscation, native code (15 features)
 
+
+## System Architecture Overview
+
+### 🔄 Data Flow (How It Works)
+
+```
+1. USER UPLOADS APK
+   ↓
+2. FRONTEND (Next.js) → BACKEND API
+   POST /api/analyze
+   ↓
+3. PRODUCTION_API (Flask)
+   ├─ Extract APK file
+   ├─ Save to temp directory
+   ↓
+4. APK_ANALYZER (androguard)
+   ├─ Parse APK manifest
+   ├─ Extract permissions
+   ├─ Analyze certificates
+   ├─ Check components
+   └─ Calculate risk score
+   ↓
+5. FEATURE EXTRACTION (18 features)
+   ├─ Permission counts
+   ├─ Activity/Service/Receiver counts
+   ├─ Certificate analysis
+   ├─ Risk scoring
+   ├─ Banking keyword detection
+   └─ Suspicious patterns
+   ↓
+6. ML MODEL (IsolationForest)
+   ├─ Load 18-feature input
+   ├─ Scale with StandardScaler
+   ├─ Predict: LEGITIMATE or SUSPICIOUS
+   └─ Calculate confidence score
+   ↓
+7. DATABASE LOGGING (SQLite)
+   ├─ Timestamp
+   ├─ APK hash
+   ├─ Classification
+   ├─ Confidence score
+   └─ Anomaly scores
+   ↓
+8. RESPONSE TO FRONTEND
+   └─ JSON result with prediction
+```
+
+---
+
 ### **ML Model Training**
 ```python
 Training Data → Feature Scaling → Model Training → Model Saving
@@ -304,7 +353,6 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)  # Allows all origins
 ```
-
 
 ## Troubleshooting
 
