@@ -9,7 +9,6 @@ import sys
 import json
 import logging
 import joblib
-import sqlite3
 import hashlib
 import tempfile
 import warnings
@@ -19,15 +18,10 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import numpy as np
 
-# Add backend directory to path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 
 def startup_checks(preferred_sklearn_version: str = "1.3.0") -> None:
-    """Light, non-verbose runtime checks. Stores compatibility notes for operators.
-
-    This function does not print to stdout to keep production output clean.
-    """
     messages = []
     try:
         import sklearn
@@ -64,7 +58,7 @@ except ImportError:
 
 @dataclass
 class APKAnalysisResult:
-    """Container for APK analysis results"""
+    
     package_name: str
     app_name: str
     version_name: str
@@ -82,7 +76,6 @@ class APKAnalysisResult:
 
 
 class APKAnalyzer:
-    """Main APK analysis class (merged from analysis/apk_analyzer.py)"""
     # Suspicious permissions commonly found in banking malware
     SUSPICIOUS_PERMISSIONS = {
         'android.permission.SEND_SMS': 'high',
@@ -111,48 +104,28 @@ class APKAnalyzer:
         self.apk = None
 
     def analyze(self, apk_path: str) -> APKAnalysisResult:
-        """
-        Perform comprehensive APK analysis
-        """
         try:
             if APK is None:
                 raise Exception('androguard not available')
 
             self.apk = APK(apk_path)
 
-            # Extract basic information
             package_name = self.apk.get_package()
             app_name = self.apk.get_app_name()
             version_name = self.apk.get_androidversion_name()
             version_code = self.apk.get_androidversion_code()
-
-            # Extract permissions
             permissions = self.apk.get_permissions() or []
-
-            # Extract components
             activities = self.apk.get_activities() or []
             services = self.apk.get_services() or []
             receivers = self.apk.get_receivers() or []
-
-            # Analyze certificates
             certificates = self._analyze_certificates()
-
-            # Calculate file hashes
             file_hashes = self._calculate_hashes(apk_path)
-
-            # Identify suspicious permissions
             suspicious_permissions = self._identify_suspicious_permissions(permissions)
-
-            # Analyze network security config
             network_config = self._analyze_network_security()
-
-            # Extract features for ML
             features = self._extract_features(
                 package_name, app_name, permissions, activities,
                 services, receivers, certificates
             )
-
-            # Calculate risk score
             risk_score = self._calculate_risk_score(
                 permissions, suspicious_permissions, certificates, features
             )
@@ -178,7 +151,6 @@ class APKAnalyzer:
             raise Exception(f"APK analysis failed: {str(e)}")
 
     def _analyze_certificates(self) -> List[Dict[str, Any]]:
-        """Analyze APK certificates and signatures"""
         certificates = []
 
         try:
@@ -200,7 +172,6 @@ class APKAnalyzer:
         return certificates
 
     def _calculate_hashes(self, apk_path: str) -> Dict[str, str]:
-        """Calculate various hashes of the APK file"""
         hashes = {}
 
         try:
@@ -215,7 +186,6 @@ class APKAnalyzer:
         return hashes
 
     def _identify_suspicious_permissions(self, permissions: List[str]) -> List[str]:
-        """Identify suspicious permissions"""
         suspicious = []
         for perm in permissions:
             if perm in self.SUSPICIOUS_PERMISSIONS:
@@ -223,12 +193,9 @@ class APKAnalyzer:
         return suspicious
 
     def _analyze_network_security(self) -> Optional[Dict[str, Any]]:
-        """Analyze network security configuration"""
         try:
-            # Look for network security config file
             network_config = self.apk.get_file("res/xml/network_security_config.xml")
             if network_config:
-                # Parse XML and extract security settings
                 root = ET.fromstring(network_config)
                 config = {
                     'clear_traffic_permitted': root.get('cleartextTrafficPermitted', 'true'),
@@ -244,16 +211,13 @@ class APKAnalyzer:
     def _extract_features(self, package_name: str, app_name: str, permissions: List[str],
                          activities: List[str], services: List[str], receivers: List[str],
                          certificates: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Extract features for machine learning"""
 
         features = {
-            # Basic features
             'permission_count': len(permissions),
             'activity_count': len(activities),
             'service_count': len(services),
             'receiver_count': len(receivers),
 
-            # Permission-based features
             'has_sms_permissions': any('SMS' in p for p in permissions),
             'has_phone_permissions': any('PHONE' in p for p in permissions),
             'has_location_permissions': any('LOCATION' in p for p in permissions),
@@ -261,22 +225,18 @@ class APKAnalyzer:
             'has_admin_permissions': any('ADMIN' in p for p in permissions),
             'has_system_alert': 'android.permission.SYSTEM_ALERT_WINDOW' in permissions,
 
-            # Suspicious permission ratio
             'suspicious_permission_ratio': len(self._identify_suspicious_permissions(permissions)) / max(len(permissions), 1),
 
-            # Certificate features
             'certificate_count': len(certificates),
             'has_self_signed_cert': any(cert.get('is_self_signed', False) for cert in certificates),
             'cert_validity_days': self._calculate_cert_validity(certificates),
 
-            # Name-based features
             'package_name_length': len(package_name),
             'app_name_length': len(app_name),
             'has_banking_keywords': any(keyword in app_name.lower() or keyword in package_name.lower()
                                       for keyword in self.BANKING_KEYWORDS),
             'package_name_suspicious': self._is_package_name_suspicious(package_name),
 
-            # Component ratios
             'service_to_activity_ratio': len(services) / max(len(activities), 1),
             'receiver_to_activity_ratio': len(receivers) / max(len(activities), 1),
         }
@@ -284,7 +244,6 @@ class APKAnalyzer:
         return features
 
     def _calculate_cert_validity(self, certificates: List[Dict[str, Any]]) -> int:
-        """Calculate average certificate validity period in days"""
         if not certificates:
             return 0
 
@@ -302,7 +261,6 @@ class APKAnalyzer:
         return total_days // max(len(certificates), 1)
 
     def _is_package_name_suspicious(self, package_name: str) -> bool:
-        """Check if package name looks suspicious"""
         suspicious_patterns = [
             'com.android.', 'android.', 'system.', 'google.', 'samsung.',
             'temp.', 'test.', 'fake.', 'malware.'
@@ -325,7 +283,6 @@ class APKAnalyzer:
         return False
 
     def _is_legitimate_system_app(self, package_name: str) -> bool:
-        """Check if this is a legitimate system app"""
         legitimate_prefixes = [
             'com.android.chrome', 'com.android.vending', 'com.google.android',
             'com.samsung.android', 'com.android.settings'
@@ -335,7 +292,6 @@ class APKAnalyzer:
 
     def _calculate_risk_score(self, permissions: List[str], suspicious_permissions: List[str],
                             certificates: List[Dict[str, Any]], features: Dict[str, Any]) -> float:
-        """Calculate overall risk score (0-100)"""
         risk_score = 0.0
 
         # Permission-based risk
@@ -363,12 +319,10 @@ app = Flask(__name__)
 CORS(app)
 
 class ProductionBankingDetector:
-    """Production Banking APK Detector with 18-feature model"""
     
     def __init__(self):
         self.base_dir = Path(__file__).parent
         self.models_dir = self.base_dir / "models"
-        self.db_path = self.base_dir / "mp_police_datasets" / "apk_database.db"
         
         # Initialize APK Analyzer for real feature extraction
         self.analyzer = APKAnalyzer()
@@ -381,7 +335,6 @@ class ProductionBankingDetector:
         # detector initialized
     
     def load_banking_model(self):
-        """Load the newly trained banking anomaly model (18 features)"""
         try:
             model_path = self.models_dir / 'banking_anomaly_model.pkl'
             scaler_path = self.models_dir / 'banking_scaler.pkl'
@@ -415,7 +368,6 @@ class ProductionBankingDetector:
             return False
     
     def extract_apk_features(self, apk_path):
-        """Extract 18 features from APK file using real androguard analysis"""
         try:
             # Perform real APK analysis
             analysis_result = self.analyzer.analyze(apk_path)
@@ -443,7 +395,6 @@ class ProductionBankingDetector:
                 1 if features_dict.get('has_banking_keywords', False) else 0    # 18. Is banking-related
             ]
             
-            # real APK analysis completed
             return np.array(features).reshape(1, -1), analysis_result
             
         except Exception as e:
@@ -453,7 +404,6 @@ class ProductionBankingDetector:
             return basic, None
     
     def _extract_basic_features(self, apk_path):
-        """Fallback: Extract basic features when androguard fails"""
         try:
             file_size = os.path.getsize(apk_path) / (1024 * 1024)
             file_name = os.path.basename(apk_path).lower()
@@ -470,7 +420,6 @@ class ProductionBankingDetector:
             return None
     
     def classify_apk(self, apk_path):
-        """Classify APK using the banking anomaly model"""
         try:
             if self.model is None or self.scaler is None:
                 return {
@@ -527,52 +476,6 @@ class ProductionBankingDetector:
                 'classification': 'ERROR',
                 'confidence': 0.0
             }
-    
-    def log_detection(self, apk_path, result):
-        """Log detection result to database"""
-        try:
-            conn = sqlite3.connect(self.db_path)
-            cursor = conn.cursor()
-            
-            # Create detection log table if not exists
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS detection_log (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    timestamp TEXT NOT NULL,
-                    apk_path TEXT NOT NULL,
-                    apk_hash TEXT,
-                    classification TEXT NOT NULL,
-                    confidence REAL,
-                    anomaly_score REAL,
-                    model_version TEXT
-                )
-            ''')
-            
-            # Calculate APK hash
-            apk_hash = hashlib.sha256(open(apk_path, 'rb').read()).hexdigest()[:16]
-            
-            # Insert detection log
-            cursor.execute('''
-                INSERT INTO detection_log 
-                (timestamp, apk_path, apk_hash, classification, confidence, anomaly_score, model_version)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                datetime.now().isoformat(),
-                apk_path,
-                apk_hash,
-                result.get('classification', 'UNKNOWN'),
-                result.get('confidence', 0.0),
-                result.get('anomaly_score', 0.0),
-                result.get('model_version', 'unknown')
-            ))
-            
-            conn.commit()
-            conn.close()
-            return True
-            
-        except Exception as e:
-            logger.error("Failed to log detection to DB: %s", e)
-            return False
 
 # Initialize detector
 startup_checks()
@@ -580,7 +483,7 @@ detector = ProductionBankingDetector()
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
-    """Health check endpoint"""
+    
     return jsonify({
         'status': 'healthy',
         'model_loaded': detector.model is not None,
@@ -590,7 +493,7 @@ def health_check():
 
 @app.route('/api/analyze', methods=['POST'])
 def analyze_apk():
-    """Analyze uploaded APK file"""
+    
     try:
         if 'file' not in request.files:
             return jsonify({'error': 'No file uploaded'}), 400
@@ -602,9 +505,8 @@ def analyze_apk():
         if not file.filename.endswith('.apk'):
             return jsonify({'error': 'File must be an APK'}), 400
         
-        # Save uploaded file temporarily with safer handling
         temp_dir = tempfile.gettempdir()
-        # Use a unique temp filename to avoid conflicts
+        
         import uuid
         safe_filename = f"apk_{uuid.uuid4().hex}_{file.filename}"
         temp_path = os.path.join(temp_dir, safe_filename)
@@ -614,9 +516,6 @@ def analyze_apk():
             
             # Classify APK
             result = detector.classify_apk(temp_path)
-            
-            # Log detection
-            detector.log_detection(temp_path, result)
             
         finally:
             # Safe cleanup - handle file lock errors
@@ -662,7 +561,7 @@ def analyze_apk():
 
 @app.route('/api/batch-scan', methods=['POST'])
 def batch_scan():
-    """Batch scan APK directory"""
+    
     try:
         data = request.get_json()
         directory_path = data.get('directory_path')
@@ -673,9 +572,8 @@ def batch_scan():
         results = []
         apk_files = list(Path(directory_path).glob("*.apk"))
         
-        for apk_file in apk_files[:10]:  # Limit to 10 files for demo
+        for apk_file in apk_files[:10]:
             result = detector.classify_apk(str(apk_file))
-            detector.log_detection(str(apk_file), result)
             
             results.append({
                 'filename': apk_file.name,
@@ -696,59 +594,7 @@ def batch_scan():
             'error': f'Batch scan failed: {str(e)}'
         }), 500
 
-@app.route('/api/stats', methods=['GET'])
-def get_stats():
-    """Get detection statistics"""
-    try:
-        conn = sqlite3.connect(detector.db_path)
-        cursor = conn.cursor()
-        
-        # Get detection counts
-        cursor.execute('SELECT classification, COUNT(*) FROM detection_log GROUP BY classification')
-        classification_counts = dict(cursor.fetchall())
-        
-        # Get recent detections
-        cursor.execute('''
-            SELECT timestamp, apk_path, classification, confidence 
-            FROM detection_log 
-            ORDER BY timestamp DESC 
-            LIMIT 10
-        ''')
-        recent_detections = [
-            {
-                'timestamp': row[0],
-                'apk_path': row[1],
-                'classification': row[2],
-                'confidence': row[3]
-            }
-            for row in cursor.fetchall()
-        ]
-        
-        conn.close()
-        
-        return jsonify({
-            'success': True,
-            'classification_counts': classification_counts,
-            'recent_detections': recent_detections,
-            'model_info': (
-                (lambda: json.load(open(detector.models_dir / 'banking_model_metadata.json')))
-                if (detector.models_dir / 'banking_model_metadata.json').exists() else {
-                    'version': 'banking_anomaly_v20250901',
-                    'features': 18,
-                    'type': 'IsolationForest'
-                }
-            )
-        })
-        
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': f'Stats retrieval failed: {str(e)}'
-        }), 500
-
 if __name__ == '__main__':
-    # Get port from environment variable (for Render/Heroku) or default to 5000
     port = int(os.environ.get('PORT', 5000))
     
-    # start the Flask app
     app.run(host='0.0.0.0', port=port, debug=False)
