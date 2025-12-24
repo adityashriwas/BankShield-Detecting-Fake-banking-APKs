@@ -4,7 +4,8 @@ import {
   Shield, Upload, Brain, Zap, Target, Activity, 
   CheckCircle, AlertTriangle, TrendingUp, Users,
   Globe, Lock, Eye, Cpu, Database, ArrowRight,
-  Play, Github, ExternalLink, Menu, X, Sparkles
+  Play, Github, ExternalLink, Menu, X, Sparkles,
+  GithubIcon
 } from 'lucide-react';
 import LiveStatsPanel from './Components/LiveStatsPanel';
 import EnhancedScanSection from './Components/EnhancedScanSection';
@@ -95,14 +96,22 @@ const ModernAPKDetector = () => {
       <header className="relative z-50 bg-black/20 backdrop-blur-xl border-b border-white/10">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
+            <a href="">
+              <div className="flex items-center space-x-3">
               <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-cyan-500 rounded-xl flex items-center justify-center">
                 <Shield className="w-7 h-7 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold">APK<span className="text-cyan-400">Guard</span></h1>
+                <h1 className="text-2xl font-bold">Bank<span className="text-cyan-400">Shield</span></h1>
                 <p className="text-xs text-gray-400">AI Security Platform</p>
               </div>
+            </div>
+            </a>
+            <div className="flex items-center space-x-4">
+              <a 
+                href="https://github.com/adityashriwas/BankShield-Detecting-Fake-banking-APKs" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white">
+                <GithubIcon className="w-6 h-6" />
+              </a>
             </div>
           </div>
         </div>
@@ -225,14 +234,12 @@ const ModernAPKDetector = () => {
             <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-cyan-500 rounded-lg flex items-center justify-center">
               <Shield className="w-5 h-5 text-white" />
             </div>
-            <span className="text-xl font-bold">APK<span className="text-cyan-400">Guard</span></span>
+            <span className="text-xl font-bold">Bank<span className="text-cyan-400">Shield</span></span>
           </div>
           <p className="text-gray-400 mb-6">AI-Powered Banking APK Security Platform</p>
           <div className="flex items-center justify-center space-x-6">
-            <a href="#" className="text-gray-400 hover:text-white transition-colors">Privacy</a>
-            <a href="#" className="text-gray-400 hover:text-white transition-colors">Terms</a>
-            <a href="#" className="text-gray-400 hover:text-white transition-colors">API Docs</a>
-            <a href="#" className="text-gray-400 hover:text-white transition-colors">Support</a>
+            <a href="" className="text-gray-400 hover:text-white transition-colors">Home</a>
+            <a href="https://github.com/adityashriwas/BankShield-Detecting-Fake-banking-APKs" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors">GitHub</a>
           </div>
         </div>
       </footer>
